@@ -1,0 +1,88 @@
+{
+  "name": "Get Chat History",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appSz4FcP5NHk5njM",
+          "mode": "list",
+          "cachedResultName": "ChatBot Convo",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllGk9pXPeFXP6fN",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM/tbllGk9pXPeFXP6fN"
+        },
+        "filterByFormula": "={session_id} = '{{ $json.query.session_id }}'",
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "ID"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "dab3c8cf-4134-41b7-8de7-413aa3525857",
+      "name": "Get chat history",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "If2iatPtUWySx1ja",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "chat-history",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ],
+      "id": "c47b68ec-b3a3-47c4-b121-e0ef5d0a515a",
+      "name": "Webhook- Get session id",
+      "webhookId": "c44c4f49-8352-4255-86cc-f46fbf62358f"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook- Get session id": {
+      "main": [
+        [
+          {
+            "node": "Get chat history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3eb6ab39-3db2-47c6-a16e-f85da4015ee2",
+  "meta": {
+    "instanceId": "b58af9b23ea6503889fbbd334186409b7b2c723202750c8a499d21420144b6fa"
+  },
+  "id": "5LGAToVyYt9P0D53",
+  "tags": []
+}

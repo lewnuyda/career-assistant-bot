@@ -1,0 +1,799 @@
+{
+  "name": "Career Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "802eba3e-51ca-4b47-b018-24b2bc8f5e62",
+              "leftValue": "={{ $json.hasFile }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2840,
+        170
+      ],
+      "id": "c4de0ade-00d6-43d4-b786-e1817fb22f59",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -2620,
+        20
+      ],
+      "id": "b3ea2df2-a05d-44d5-8ddd-442907237700",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.fields.message }} {{ $('Extract from File').item.json.text }}\nKeep the response short and concise. Do NOT ask for clarifications or additional info.\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -2024,
+        -80
+      ],
+      "id": "6ee43940-25aa-4b22-973e-561063b2e55b",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-chat",
+          "mode": "list",
+          "cachedResultName": "deepseek-chat"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1936,
+        140
+      ],
+      "id": "3921aab1-2d0d-4282-a3f7-fe2402abcf6e",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "9QwQlDtyKdQZWtCL",
+          "name": "DeepSeek R1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot",
+        "responseMode": "lastNode",
+        "options": {
+          "binaryPropertyName": "attachment"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3280,
+        170
+      ],
+      "id": "5e192fb6-9d74-44f9-8edc-4b1de5ca15d0",
+      "name": "Webhook- Post chat",
+      "webhookId": "733bcbfa-1cf2-42b4-ad50-757475d2b016"
+    },
+    {
+      "parameters": {
+        "jsCode": "const binary = items[0].binary;\n\nif (binary && binary.attachment0) {\n  return [{\n    json: { hasFile: true },\n    binary: {\n      attachment0: binary.attachment0\n    }\n  }];\n} else {\n  return [{\n    json: { hasFile: false }\n  }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3060,
+        170
+      ],
+      "id": "25d6c6ff-e1f8-4845-abe4-c844dd57eaea",
+      "name": "Check file if true or false"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appSz4FcP5NHk5njM",
+          "mode": "list",
+          "cachedResultName": "ChatBot Convo",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllGk9pXPeFXP6fN",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM/tbllGk9pXPeFXP6fN"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Webhook- Post chat').item.json.body.session_id }}",
+            "role": "user",
+            "message": "={{ $('Webhook- Post chat').item.json.body.message }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "user",
+                  "value": "user"
+                },
+                {
+                  "name": "bot",
+                  "value": "bot"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "filename",
+              "displayName": "filename",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -2620,
+        320
+      ],
+      "id": "97b6bebb-0540-4a89-ad9d-98f9796cf84c",
+      "name": "Save user chat0",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "If2iatPtUWySx1ja",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appSz4FcP5NHk5njM",
+          "mode": "list",
+          "cachedResultName": "ChatBot Convo",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllGk9pXPeFXP6fN",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM/tbllGk9pXPeFXP6fN"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Webhook- Post chat').item.json.body.session_id }}",
+            "role": "user",
+            "message": "={{ $('Webhook- Post chat').item.json.body.message }}",
+            "filename": "={{ $('Extract from File').item.json.info.Title }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "user",
+                  "value": "user"
+                },
+                {
+                  "name": "bot",
+                  "value": "bot"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "filename",
+              "displayName": "filename",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -2322,
+        20
+      ],
+      "id": "056f6eaa-9160-438a-b01c-c73a606f708f",
+      "name": "Save user chat1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "If2iatPtUWySx1ja",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook- Post chat').item.json.body.message }}\nYou are a professional AI Career Coach and Resume Consultant. Please keep it short and provide a concise summary only. Do NOT ask for questions/ clarifications or additional info. ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -2400,
+        320
+      ],
+      "id": "591a589e-b677-4965-806b-cf62924e90c3",
+      "name": "AI Agent0"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appSz4FcP5NHk5njM",
+          "mode": "list",
+          "cachedResultName": "ChatBot Convo",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllGk9pXPeFXP6fN",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM/tbllGk9pXPeFXP6fN"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Webhook- Post chat').item.json.body.session_id }}",
+            "role": "bot",
+            "message": "={{ $json.output }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "user",
+                  "value": "user"
+                },
+                {
+                  "name": "bot",
+                  "value": "bot"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "filename",
+              "displayName": "filename",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1946,
+        320
+      ],
+      "id": "6f1d6586-a606-4dfc-a97f-8ec53f244a1b",
+      "name": "Save bot reply0",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "If2iatPtUWySx1ja",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appSz4FcP5NHk5njM",
+          "mode": "list",
+          "cachedResultName": "ChatBot Convo",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllGk9pXPeFXP6fN",
+          "mode": "list",
+          "cachedResultName": "chat_history",
+          "cachedResultUrl": "https://airtable.com/appSz4FcP5NHk5njM/tbllGk9pXPeFXP6fN"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Webhook- Post chat').item.json.body.session_id }}",
+            "role": "bot",
+            "message": "={{ $json.output }}",
+            "filename": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "user",
+                  "value": "user"
+                },
+                {
+                  "name": "bot",
+                  "value": "bot"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "filename",
+              "displayName": "filename",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1648,
+        20
+      ],
+      "id": "800b49bf-9a82-4c2f-946f-68f759be8beb",
+      "name": "Save bot reply1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "If2iatPtUWySx1ja",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.first().json.fields.message\n\nlet responseText = \"Sorry, I couldn't generate a reply.\";\n\nif (typeof content === \"string\") {\n  responseText = content;\n} else if (content?.response) {\n  responseText = content.response;\n} else if (content?.cover_letter) {\n  const cl = content.cover_letter;\n  responseText = `${cl.greeting}\\n\\n${cl.introduction}\\n\\n${cl.body.join('\\n\\n')}\\n\\n${cl.closing}\\n\\n${cl.signature}`;\n}\n\nreturn [\n  {\n    json: {\n      reply: responseText\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1428,
+        20
+      ],
+      "id": "e9cf87b0-3a4d-4b97-9ea9-9d02db9b77a1",
+      "name": "Format reply1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn [{ json: { reply: $('AI Agent0').first().json.output } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1648,
+        320
+      ],
+      "id": "1465ce16-f19f-4512-8577-652280a1f330",
+      "name": "Format reply0"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-chat",
+          "mode": "list",
+          "cachedResultName": "deepseek-chat"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -2312,
+        540
+      ],
+      "id": "e6f38489-55b0-4fab-b9c9-b6b86f0a6ba0",
+      "name": "OpenAI Chat Model0",
+      "credentials": {
+        "openAiApi": {
+          "id": "9QwQlDtyKdQZWtCL",
+          "name": "DeepSeek R1"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save user chat0",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Save user chat1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Save bot reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook- Post chat": {
+      "main": [
+        [
+          {
+            "node": "Check file if true or false",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check file if true or false": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save user chat0": {
+      "main": [
+        [
+          {
+            "node": "AI Agent0",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save user chat1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent0": {
+      "main": [
+        [
+          {
+            "node": "Save bot reply0",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save bot reply0": {
+      "main": [
+        [
+          {
+            "node": "Format reply0",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save bot reply1": {
+      "main": [
+        [
+          {
+            "node": "Format reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format reply1": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model0": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent0",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00d582ec-ead6-4ddd-a94f-6cf655154b2b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b58af9b23ea6503889fbbd334186409b7b2c723202750c8a499d21420144b6fa"
+  },
+  "id": "0NLSWN3Ex0umy3eK",
+  "tags": []
+}

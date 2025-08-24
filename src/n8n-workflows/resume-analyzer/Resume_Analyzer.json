@@ -1,0 +1,409 @@
+{
+  "name": "Resume Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "resume",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        -140
+      ],
+      "id": "1141013c-a677-4d17-9d2e-b29dc9ae657b",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a resume shortlisting assistant.\n\nYou will receive multiple resumes and one job description.\n\nYour task:\n\n1. Only include candidates whose job titles or primary roles clearly match the target job title category:\n   - \"Software Engineer\" → accept \"Software Engineer\", \"Full Stack Developer\", \"Backend Developer\", \"Frontend Developer\".\n   - \"QA Engineer\" or \"QA Tester\" → accept \"QA Engineer\", \"QA Tester\", \"QA Analyst\", \"Software Tester\".\n   - \"Automation Specialist\" → accept \"Automation Specialist\", \"RPA Developer\", \"Integration Specialist\".\n\n2. If a resume does not match the target category, do not score it and do not include it in the rankings.\n\n3. For qualified candidates, assign a Match Score out of 100 using:\n   - 60% Role/title alignment\n   - 25% Required technical skills\n   - 10% Nice-to-have skills\n   - 5% Soft skills\n\n4. Rank qualified candidates from highest to lowest.\n\n5. For each candidate, include:\n   - `rank`: position in the shortlist\n   - `name`: candidate’s full name\n   - `email`: candidate’s email (extract from resume)\n   - `score`: match score\n   - `reason`: concise one-line reason that starts with role alignment\n\n6. If no candidates match, return:\n{\n  \"rankings\": []\n}\n\nOutput format (valid JSON only, no extra text):\n{\n  \"jobTitle\": \"Target Job Title\",\n  \"rankings\": [\n    {\n      \"rank\": 1,\n      \"name\": \"Candidate Name\",\n      \"email\": \"candidate@email.com\",\n      \"score\": 95,\n      \"reason\": \"Short reason here\"\n    }\n  ]\n}\n\nResumes:\n{{ JSON.stringify($('Format resumes[] result2').item.json.resumes) }}\n\nJob Description:\n{{ $json.description }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -140
+      ],
+      "id": "ae6f9999-f2b4-47a9-99a9-c76b5cfd66c1",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-chat",
+          "mode": "list",
+          "cachedResultName": "deepseek-chat"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        568,
+        80
+      ],
+      "id": "656ff640-379e-41bf-b1f7-aab2107dfdbc",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "9QwQlDtyKdQZWtCL",
+          "name": "DeepSeek R1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "submit-resume",
+        "authentication": "jwtAuth",
+        "responseMode": "lastNode",
+        "options": {
+          "binaryPropertyName": "resume"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        -140
+      ],
+      "id": "e0327fff-7b4a-45cc-9934-5901027eb9d5",
+      "name": "Webhook- Post",
+      "webhookId": "ddd1a1b2-74d4-4399-b29d-cbd24dec2fde",
+      "credentials": {
+        "jwtAuth": {
+          "id": "99WIsaju2KIMlmQp",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "jobs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Webhook- Post').first().json.body.jobOptions }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        260,
+        -140
+      ],
+      "id": "d33a5bac-de69-441d-a8b3-052fd1c3c55c",
+      "name": "Supabase- Get Jobs",
+      "credentials": {
+        "supabaseApi": {
+          "id": "BANOzZ0pI7sBVXFQ",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Get the raw string output from the previous node\nconst rawOutput = $input.first().json.output;\n\ntry {\n  // Step 2: Parse the JSON string directly\n  const parsed = JSON.parse(rawOutput);\n\n  // Step 3: Return the parsed result in an array of objects (as n8n expects)\n  return [{ json: parsed }];\n} catch (err) {\n  throw new Error(\"Failed to parse JSON: \" + err.message + \" | Raw Output: \" + rawOutput);\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        -140
+      ],
+      "id": "b064e5dc-d841-4d4b-95bf-348eb78e26a1",
+      "name": "Format result by ranking"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  for (const key in item.binary) {\n    if (key.startsWith('resume')) {\n      results.push({\n        json: {\n          jobDescription: item.json.jobDescription || item.json.body?.jobDescription || '',\n          fileName: item.binary[key].fileName\n        },\n        binary: {\n          resume: item.binary[key] // copy the full binary object for this item\n        }\n      });\n    }\n  }\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -140
+      ],
+      "id": "6753032c-d536-466b-bdda-65beb95ca4cf",
+      "name": "Format resumes[] result1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      resumes: items.map(item => ({\n        fileName: item.json.fileName || \"Unknown\",\n        text: item.json.text\n      }))\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        40,
+        -140
+      ],
+      "id": "20224919-0ef4-44d9-91ea-3c1862f882e3",
+      "name": "Format resumes[] result2"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1uljT7lIaLiRyV92pnhmsRCh-L0vSZgLGsnapeehsc8U",
+          "mode": "list",
+          "cachedResultName": "Recruitment Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uljT7lIaLiRyV92pnhmsRCh-L0vSZgLGsnapeehsc8U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Analysis Result",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uljT7lIaLiRyV92pnhmsRCh-L0vSZgLGsnapeehsc8U/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Rank": "={{ $json.rankings.rank }}",
+            "Job": "={{ $json.jobTitle }}",
+            "Name": "={{ $json.rankings.name }}",
+            "Email": "={{ $json.rankings.email }}",
+            "Reason": "={{ $json.rankings.reason }}",
+            "Score": "={{ $json.rankings.score }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Rank",
+              "displayName": "Rank",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job",
+              "displayName": "Job",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1240,
+        -140
+      ],
+      "id": "c70256ef-b952-4676-b5a3-5f8b2cb46f83",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "q6nzN1lrw9s6jHFr",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "rankings",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        -140
+      ],
+      "id": "5cc6efc7-b205-48c7-b5a8-a7298fe6c207",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Get the raw string output from the previous node\nconst rawOutput = $('AI Agent').first().json.output\n\ntry {\n  // Step 2: Parse the JSON string directly\n  const parsed = JSON.parse(rawOutput);\n\n  // Step 3: Return the parsed result in an array of objects (as n8n expects)\n  return [{ json: parsed }];\n} catch (err) {\n  throw new Error(\"Failed to parse JSON: \" + err.message + \" | Raw Output: \" + rawOutput);\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        -140
+      ],
+      "id": "2b84df3c-b1b2-408a-b0c4-d5514c070d71",
+      "name": "Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Format resumes[] result2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format result by ranking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook- Post": {
+      "main": [
+        [
+          {
+            "node": "Format resumes[] result1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase- Get Jobs": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format resumes[] result1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format resumes[] result2": {
+      "main": [
+        [
+          {
+            "node": "Supabase- Get Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format result by ranking": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3000e9e4-8882-4093-8e37-7715d444569b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b58af9b23ea6503889fbbd334186409b7b2c723202750c8a499d21420144b6fa"
+  },
+  "id": "KCZ06xUxX9dAe9Sn",
+  "tags": []
+}

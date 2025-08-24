@@ -1,0 +1,107 @@
+{
+  "name": "Send Email to Candidates",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-email",
+        "authentication": "jwtAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "72611961-173b-4203-a6dc-e266e14a564e",
+      "name": "Webhook",
+      "webhookId": "83241b1b-450b-45b9-8ded-4fb5e2388347",
+      "credentials": {
+        "jwtAuth": {
+          "id": "99WIsaju2KIMlmQp",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "lewnuyda@gmail.com",
+        "subject": "=Application Update – {{ $('Code').item.json.jobTitle }} Position",
+        "message": "=Dear {{ $('Code').item.json.name }},<br><br>\n\nThank you for applying to the <strong>{{ $('Code').item.json.jobTitle }}</strong> position. Based on our evaluation, your profile scored <strong>{{ $('Code').item.json.score }}%</strong>.<br><br>\n\n\n{{ $('Code').item.json.reason }}<br><br>\n\nWe truly appreciate the time and effort you invested in your application. Our team will reach out with the next steps if your application moves forward.<br><br>\n\nBest regards, <br>\nHR Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "0dd6dd26-cf48-4020-8e7e-522099dd7b69",
+      "name": "Gmail",
+      "webhookId": "3f8aef97-e828-4858-b8da-a6d3e8c14ffb",
+      "alwaysOutputData": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "etHzJIZnZUkUdoPK",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get job title and candidates from webhook body\nconst jobTitle = $input.first().json.body.jobTitle || \"Unknown Job\";\nconst candidates = $input.first().json.body.candidates || [];\n\n// Map candidates, attaching jobTitle to each one\nreturn candidates.map(candidate => {\n  return {\n    json: {\n      rank: candidate.rank,\n      name: candidate.name,\n      email: candidate.email,\n      score: candidate.score,\n      reason: candidate.reason,\n      jobTitle: jobTitle, // ✅ attach job title here\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "6d91a1e3-4cd7-400e-b12b-d5a07d0c58e3",
+      "name": "Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "723bfdf7-04b4-436b-8b24-e309fc9492d7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b58af9b23ea6503889fbbd334186409b7b2c723202750c8a499d21420144b6fa"
+  },
+  "id": "mqhoK6r9kTRS6HZ9",
+  "tags": []
+}
